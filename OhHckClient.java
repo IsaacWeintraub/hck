@@ -15,7 +15,7 @@ public class OhHckClient {
         String fromServer, fromUser;
         while ((fromServer = in.readLine()) != null) {
             handleResponse(fromServer);
-            if (fromServer.equals("stop thread")) {
+            if (fromServer.equals("STOP")) {
                 break;
             }
             fromUser = obtainData();

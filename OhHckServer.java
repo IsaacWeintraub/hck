@@ -15,8 +15,9 @@ public class OhHckServer  {
     private int maxPlayers;
     private int currentPlayers;
     private OhHckGame game;
+    private boolean shouldContinue;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         OhHckServer server = new OhHckServer("Grsnt", 6);
     }
 
@@ -25,12 +26,13 @@ public class OhHckServer  {
         this.maxPlayers = maxPlayers;
         this.currentPlayers = 1;
         this.game = new OhHckGame();
+        shouldContinue = true;
         /* initialize other fields? */
 
         ServerSocket serverSocket = null;
         serverSocket = new ServerSocket(PORT);
-        while(shouldContinue()) {
-            while (currentPlayers < maxPlayers && shouldContinue()) {
+        while (shouldContinue) {
+            while (currentPlayers < maxPlayers && shouldContinue) {
                 (new ServerThread(serverSocket.accept())).start();
             }
         }
@@ -39,18 +41,16 @@ public class OhHckServer  {
         }
     }
 
-    private boolean shouldContinue() {
-        return true;
-    }
 
-    private class ServerThread extends Thread {
+    public class ServerThread extends Thread {
 
         private Socket socket;
 
         public ServerThread(Socket socket) {
-            super("OhHckServer.ServerThread");
+            super("OhHckServer.ServerThread$" + currentPlayers);
             this.socket = socket;
             currentPlayers++;
+            game.addClient(this);
         }
 
         @Override
@@ -60,12 +60,13 @@ public class OhHckServer  {
                 BufferedReader in = new BufferedReader(
                     new InputStreamReader(socket.getInputStream()));
                 String input, output;
-                output = game.process(null);
+                output = game.process(null, this);
                 out.println(output);
                 while ((input = in.readLine()) != null) {
-                    output = game.process(input);
+                    output = game.process(input, this);
                     out.println(output);
-                    if (output.equals("stop thread")) {
+                    if (output.equals("STOP")) {
+                        shouldContinue = false;
                         break;
                     }
                 }
