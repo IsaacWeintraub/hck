@@ -2,16 +2,36 @@ import java.util.Scanner;
 
 public class ClientTester {
 
-    public static final boolean EVER = true;
+    static OhHckClient client;
 
     public static void main(String[] args) throws Exception {
-        Scanner input = new Scanner(System.in);
-        OhHckClient client = new OhHckClient("192.168.0.24");
+        InputParser p = new InputParser();
+        p.start();
+        client = new OhHckClient("192.168.0.24");
+        p.stahp();
+    }
 
-        for ( ; EVER; ) {
-            if (input.hasNext()) {
-                client.transmit(input.nextLine());
+    static class InputParser extends Thread {
+
+        Scanner input;
+        boolean stopped;
+
+        public InputParser() {
+            input = new Scanner(System.in);
+            stopped = false;
+        }
+
+        @Override
+        public void run() {
+            while (!stopped) {
+                if (input.hasNext()) {
+                    client.transmit(input.nextLine());
+                }
             }
+        }
+
+        public void stahp() {
+            stopped = true;
         }
     }
 }
