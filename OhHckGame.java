@@ -33,8 +33,9 @@ public class OhHckGame {
                     if (input == null) {
                         sender.transmit("WELCOME");
                         matched = true;
-                    } else if (input.length() >= 6 && input.substring(0,6).equals("START ")
-                        && sender == clients.get(0)) {
+                    } else if (input.length() >= 6
+                            && input.substring(0,6).equals("START ")
+                            && sender == clients.get(0)) {
                         state = State.STARTED;
                         upperLimit = Integer.parseInt(
                             input.substring(input.lastIndexOf(' ') + 1));

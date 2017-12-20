@@ -7,20 +7,18 @@ import java.net.UnknownHostException;
 
 public class OhHckClient {
 
+    private PrintWriter out;
+
     public OhHckClient(String host) throws UnknownHostException, IOException {
         Socket socket = new Socket(host, OhHckServer.PORT);
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        out = new PrintWriter(socket.getOutputStream(), true);
         BufferedReader in = new BufferedReader(
             new InputStreamReader(socket.getInputStream()));
-        String fromServer, fromUser;
+        String fromServer;
         while ((fromServer = in.readLine()) != null) {
             handleResponse(fromServer);
             if (fromServer.equals("STOP")) {
                 break;
-            }
-            fromUser = obtainData();
-            if (fromUser != null) {
-                out.println(fromUser);
             }
         }
         socket.close();
@@ -32,11 +30,7 @@ public class OhHckClient {
         System.out.println("response: " + response);
     }
 
-    public String obtainData() {
-        String ret = null;
-        try {
-            ret = (new BufferedReader(new InputStreamReader(System.in))).readLine();
-        } catch (Exception e) {}
-        return ret;
+    protected void transmit(String message) {
+        out.println(message);
     }
 }
