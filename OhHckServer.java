@@ -45,6 +45,7 @@ public class OhHckServer  {
     public class ServerThread extends Thread {
 
         private Socket socket;
+        private PrintWriter out;
 
         public ServerThread(Socket socket) {
             super("OhHckServer.ServerThread$" + currentPlayers);
@@ -56,19 +57,13 @@ public class OhHckServer  {
         @Override
         public void run() {
             try {
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out = new PrintWriter(socket.getOutputStream(), true);
                 BufferedReader in = new BufferedReader(
                     new InputStreamReader(socket.getInputStream()));
-                String input, output;
-                output = game.process(null, this);
-                out.println(output);
-                while ((input = in.readLine()) != null) {
-                    output = game.process(input, this);
-                    out.println(output);
-                    if (output.equals("STOP")) {
-                        shouldContinue = false;
-                        break;
-                    }
+                String input;
+                game.process(null, this);
+                while ((input = in.readLine()) != null && shouldContinue) {
+                    game.process(input, this);
                 }
                 socket.close();
                 out.close();
@@ -76,5 +71,13 @@ public class OhHckServer  {
             } catch (IOException e) {}
             currentPlayers--;
         }
+
+        protected void transmit(String message) {
+            if (message.equals("STOP")) {
+                shouldContinue = false;
+            }
+            out.println(message);
+        }
     }
+
 }
