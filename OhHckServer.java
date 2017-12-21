@@ -24,7 +24,7 @@ public class OhHckServer  {
     public OhHckServer(String name, int maxPlayers) throws IOException {
         this.name = name;
         this.maxPlayers = maxPlayers;
-        this.currentPlayers = 1;
+        this.currentPlayers = 0;
         this.game = new OhHckGame();
         shouldContinue = true;
         /* initialize other fields? */
@@ -46,11 +46,15 @@ public class OhHckServer  {
 
         private Socket socket;
         private PrintWriter out;
+        private int score;
+        private String playerName;
 
         public ServerThread(Socket socket) {
             super("OhHckServer.ServerThread$" + currentPlayers);
             this.socket = socket;
             currentPlayers++;
+            this.score = 0;
+            this.playerName = "";
             game.addClient(this);
         }
 
@@ -72,11 +76,31 @@ public class OhHckServer  {
             currentPlayers--;
         }
 
+        public String getPlayerName() {
+            return playerName;
+        }
+
+        protected void setPlayerName(String value) {
+            playerName = value;
+        }
+
+        protected void addScore(int delta) {
+            score += delta;
+        }
+
+        public int getScore() {
+            return score;
+        }
+
         protected void transmit(String message) {
             if (message.equals("STOP")) {
                 shouldContinue = false;
             }
             out.println(message);
+        }
+
+        public int getCurrentPlayers() {
+            return currentPlayers;
         }
     }
 

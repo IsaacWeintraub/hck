@@ -10,6 +10,8 @@ public class OhHckGame {
     private State state;
     private List<OhHckServer.ServerThread> clients;
     private int upperLimit;
+    private Deck deck;
+    private int dealer;
 
     public OhHckGame() {
         this.state = State.WAITING;
@@ -23,28 +25,30 @@ public class OhHckGame {
     public void process(String input, OhHckServer.ServerThread sender) {
         System.out.println("Processing: " + input);
         if (input != null && input.equals("STOP") && sender == clients.get(0)) {
-            for (OhHckServer.ServerThread c : clients) {
-                c.transmit("STOP");
-            }
+            transmitAll("STOP");
         } else {
             boolean matched = false;
             switch (state) {
                 case WAITING:
                     if (input == null) {
-                        sender.transmit("WELCOME");
+                        sender.setPlayerName("Player" + sender.getCurrentPlayers());
+                        sender.transmit("WELCOME " + sender.getPlayerName());
                         matched = true;
                     } else if (input.length() >= 6
                             && input.substring(0,6).equals("START ")
-                            && sender == clients.get(0)) {
+                            && sender == clients.get(0) /*&& sender.size() >= 3*/) {
                         state = State.STARTED;
                         upperLimit = Integer.parseInt(
                             input.substring(input.lastIndexOf(' ') + 1));
-                        sender.transmit("DECK SHIT");
+                        deck = new Deck(Integer.parseInt(input.substring(
+                            input.indexOf(' ') + 1, input.indexOf(' ') + 2)));
                         matched = true;
+                        transmitAll(scores());
+                        dealer = (int) (Math.random() * clients.size());
+                        clients.get(dealer).transmit("DEALER");
                     }
                     break;
                 case STARTED:
-                    state = State.WAITING;
                     sender.transmit("IN PROGRESS");
                     matched = true;
                     break;
@@ -52,6 +56,26 @@ public class OhHckGame {
             if (!matched) {
                 sender.transmit("NOT RECOGNIZED");
             }
+        }
+    }
+
+    private String scores() {
+        StringBuilder ret = new StringBuilder();
+        ret.append('[');
+        for (OhHckServer.ServerThread c : clients) {
+            ret.append(c.getName());
+            ret.append('=');
+            ret.append(c.getScore());
+            ret.append(", ");
+        }
+        ret.deleteCharAt(ret.length() - 1);
+        ret.append(']');
+        return ret.toString();
+    }
+
+    private void transmitAll(String message) {
+        for (OhHckServer.ServerThread c : clients) {
+            c.transmit(message);
         }
     }
 
