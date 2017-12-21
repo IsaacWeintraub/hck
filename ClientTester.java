@@ -8,6 +8,7 @@ public class ClientTester {
         InputParser p = new InputParser();
         p.start();
         client = new OhHckClient("192.168.0.24");
+        client.start();
         p.stahp();
     }
 
@@ -15,8 +16,11 @@ public class ClientTester {
 
         Scanner input;
         boolean stopped;
+        static int num = 1;
 
         public InputParser() {
+            super("ClientTester.InputParser$" + num);
+            num++;
             input = new Scanner(System.in);
             stopped = false;
         }

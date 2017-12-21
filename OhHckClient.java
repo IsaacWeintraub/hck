@@ -8,12 +8,16 @@ import java.net.UnknownHostException;
 public class OhHckClient {
 
     private PrintWriter out;
+    private Socket socket;
+    private BufferedReader in;
 
     public OhHckClient(String host) throws UnknownHostException, IOException {
-        Socket socket = new Socket(host, OhHckServer.PORT);
+        socket = new Socket(host, OhHckServer.PORT);
         out = new PrintWriter(socket.getOutputStream(), true);
-        BufferedReader in = new BufferedReader(
-            new InputStreamReader(socket.getInputStream()));
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    }
+
+    public void start() throws IOException {
         String fromServer;
         while ((fromServer = in.readLine()) != null) {
             handleResponse(fromServer);
