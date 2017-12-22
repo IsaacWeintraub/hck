@@ -15,7 +15,9 @@ public class Deck extends LinkedList<Card> {
         for (int d = 0; d < number; d++) {
             addDeck();
         }
-        Collections.shuffle(this);
+        for (int c = 0; c < 7 + number; c++ /* haha aren't i funny */) {
+            Collections.shuffle(this);
+        }
     }
 
     private void addDeck() {

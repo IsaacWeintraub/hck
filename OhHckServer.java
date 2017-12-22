@@ -48,15 +48,13 @@ public class OhHckServer  {
         private String playerName;
         private int bid;
         private int tricks;
+        private ServerSidePlayer player;
 
         public ServerThread(Socket socket) {
             super("OhHckServer.ServerThread$" + currentPlayers);
             this.socket = socket;
             currentPlayers++;
-            this.score = 0;
-            this.playerName = "";
-            this.bid = 0;
-            this.tricks = 0;
+            this.player = new ServerSidePlayer();
             game.addClient(this);
         }
 
@@ -78,47 +76,15 @@ public class OhHckServer  {
             currentPlayers--;
         }
 
-        protected void setTricks(boolean addOrClear) {
-            if (addOrClear) {
-                tricks += 1;
-            } else {
-                tricks = 0;
-            }
-        }
-
-        public int getTricks() {
-            return tricks;
-        }
-
-        public int getBid() {
-            return bid;
-        }
-
-        protected void setBid(int value) {
-            bid = value;
-        }
-
-        public String getPlayerName() {
-            return playerName;
-        }
-
-        protected void setPlayerName(String value) {
-            playerName = value;
-        }
-
-        protected void addScore(int delta) {
-            score += delta;
-        }
-
-        public int getScore() {
-            return score;
-        }
-
         protected void transmit(String message) {
             if (message.equals("STOP")) {
                 shouldContinue = false;
             }
             out.println(message);
+        }
+
+        public ServerSidePlayer player() {
+            return player;
         }
 
         public int getCurrentPlayers() {

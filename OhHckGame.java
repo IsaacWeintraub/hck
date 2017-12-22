@@ -18,6 +18,7 @@ public class OhHckGame {
     private List<TrackingCard> played;
     private int ctr;
     private boolean direction;
+    private int nsp;
 
     public OhHckGame() {
         this.state = State.WAITING;
@@ -36,123 +37,129 @@ public class OhHckGame {
         System.out.println("Processing: " + input);
         if (input == null) {
             if (state == State.WAITING) {
-                sender.setPlayerName("Player" + sender.getCurrentPlayers());
-                sender.transmit("WELCOME " + sender.getPlayerName());
+                sender.player().setPlayerName(
+                    "Player" + sender.getCurrentPlayers());
+                sender.transmit("WELCOME " + sender.player().getPlayerName());
             } else {
                 sender.transmit("IN PROGRESS");
             }
         } else if (input.equals("STOP") && sender == clients.get(0)) {
             transmitAll("STOP");
         } else {
-            boolean matched = false;
-            switch (state) {
-                case WAITING:
-                    if (input.length() >= 6
-                            && input.substring(0, 6).equals("START ")
-                            && sender == clients.get(0) /*&& sender.size() >= 3*/) {
-                        state = State.STARTED;
-                        upperLimit = Integer.parseInt(
-                            input.substring(input.lastIndexOf(' ') + 1));
-                        deck = new Deck(Integer.parseInt(input.substring(
-                            input.indexOf(' ') + 1, input.indexOf(' ') + 2)));
-                        matched = true;
-                        transmitAll(scores());
-                        dealer = (int) (Math.random() * clients.size());
-                        clients.get(dealer).transmit("DEALER");
-                    }
-                    break;
-                case STARTED:
-                    if (input.equals("BEGDEAL") && sender == clients.get(dealer)) {
-                        for (int i = 0; i < numCards; i++) {
-                            for (int j = 0; j < clients.size(); j++) {
-                                clients.get((dealer + j + 1) % clients.size())
-                                    .transmit("DEAL " + deck.pop().toString());
+            try {
+                boolean matched = false;
+                switch (state) {
+                    case WAITING:
+                        if (input.length() >= 6
+                                && input.substring(0, 6).equals("START ")
+                                && sender == clients.get(0) /*&& sender.size() >= 3*/) {
+                            state = State.STARTED;
+                            upperLimit = Integer.parseInt(
+                                input.substring(input.lastIndexOf(' ') + 1));
+                            deck = new Deck(Integer.parseInt(input.substring(
+                                input.indexOf(' ') + 1, input.indexOf(' ') + 2)));
+                            matched = true;
+                            transmitAll(scores());
+                            dealer = (int) (Math.random() * clients.size());
+                            clients.get(dealer).transmit("DEALER");
+                        }
+                        break;
+                    case STARTED:
+                        if (input.equals("BEGDEAL") && sender == clients.get(dealer)) {
+                            for (int i = 0; i < numCards; i++) {
+                                for (int j = 0; j < clients.size(); j++) {
+                                    clients.get((dealer + j + 1) % clients.size())
+                                        .transmit("DEAL " + deck.pop().toString());
+                                }
                             }
+                            eraseBids();
+                            matched = true;
+                            transmitAll(bids());
+                            clients.get((dealer + 1) % clients.size())
+                                .transmit("PLACEBID " + bidRestriction(dealer + 1));
+                            state = State.BIDDING;
+                            plon = dealer + 1;
+                            nsp = plon % clients.size();
                         }
-                        eraseBids();
-                        matched = true;
-                        transmitAll(bids());
-                        clients.get((dealer + 1) % clients.size())
-                            .transmit("PLACEBID " + bidRestriction(dealer + 1));
-                        state = State.BIDDING;
-                        plon = dealer + 1;
-                    }
-                    break;
-                case BIDDING:
-                    if (input.length() >= 4
-                            && input.substring(0, 4).equals("BID ")
-                            && sender == clients.get(plon % clients.size())) {
-                        sender.setBid(Integer.parseInt(input.substring(4)));
-                        updateBidTotal();
-                        plon++;
-                        matched = true;
-                        transmitAll(bids());
-                        if (plon < dealer + clients.size() + 1) {
-                            clients.get(plon % clients.size())
-                                .transmit("PLACEBID " + bidRestriction(plon));
-                        } else {
-                            state = State.TRICK;
-                            ctr = 0;
-                            clearTricks();
-                            played.clear();
-                            transmitAll("PLAYED " + played);
-                            clients.get(plon % clients.size()).transmit("PLAY");
-                        }
-                    }
-                    break;
-                case TRICK:
-                    if (input.length() >= 8
-                            && input.substring(0, 8).equals("PLAYING ")
-                            && sender == clients.get(plon % clients.size())) {
-                        played.add(new TrackingCard(
-                            Card.fromString(input.substring(8)), sender,
-                            System.currentTimeMillis()));
-                        plon++;
-                        matched = true;
-                        transmitAll("PLAYED " + played);
-                        if (plon % clients.size() != (dealer + 1) % clients.size()) {
-                            clients.get(plon % clients.size()).transmit("PLAY");
-                        } else {
-                            transmitAll("TRICK " + winner());
-                            ctr++;
-                            if (ctr < numCards) {
-                                played.clear();
+                        break;
+                    case BIDDING:
+                        if (input.length() >= 4
+                                && input.substring(0, 4).equals("BID ")
+                                && sender == clients.get(plon % clients.size())) {
+                            sender.player().setBid(Integer.parseInt(input.substring(4)));
+                            updateBidTotal();
+                            plon++;
+                            matched = true;
+                            transmitAll(bids());
+                            if (plon < dealer + clients.size() + 1) {
+                                clients.get(plon % clients.size())
+                                    .transmit("PLACEBID " + bidRestriction(plon));
+                            } else {
+                                state = State.TRICK;
                                 ctr = 0;
+                                clearTricks();
+                                played.clear();
                                 transmitAll("PLAYED " + played);
                                 clients.get(plon % clients.size()).transmit("PLAY");
+                            }
+                        }
+                        break;
+                    case TRICK:
+                        if (input.length() >= 8
+                                && input.substring(0, 8).equals("PLAYING ")
+                                && sender == clients.get(plon % clients.size())) {
+                            played.add(new TrackingCard(
+                                Card.fromString(input.substring(8)), sender,
+                                System.currentTimeMillis()));
+                            plon++;
+                            matched = true;
+                            transmitAll("PLAYED " + played);
+                            if (plon % clients.size() != nsp) {
+                                clients.get(plon % clients.size()).transmit("PLAY");
                             } else {
-                                if (numCards == upperLimit) {
-                                    direction = false;
-                                }
-                                numCards += (direction) ? 1 : -1;
-                                assignScores();
-                                transmitAll(scores());
-                                if (numCards != 0) {
-                                    state = State.STARTED;
-                                    deck.reset();
-                                    dealer++;
-                                    dealer %= clients.size();
-                                    clients.get(dealer).transmit("DEALER");
+                                transmitAll("TRICK " + winner());
+                                ctr++;
+                                System.out.println("ctr = " + ctr);
+                                if (ctr < numCards) {
+                                    played.clear();
+                                    transmitAll("PLAYED " + played);
+                                    clients.get(plon % clients.size()).transmit("PLAY");
                                 } else {
-                                    transmitAll(results());
-                                    transmitAll("STOP");
+                                    ctr = 0;
+                                    if (numCards == upperLimit) {
+                                        direction = false;
+                                    }
+                                    numCards += (direction) ? 1 : -1;
+                                    assignScores();
+                                    transmitAll(scores());
+                                    if (numCards != 0) {
+                                        state = State.STARTED;
+                                        deck.reset();
+                                        dealer++;
+                                        dealer %= clients.size();
+                                        clients.get(dealer).transmit("DEALER");
+                                    } else {
+                                        transmitAll(results());
+                                        transmitAll("STOP");
+                                    }
                                 }
                             }
                         }
-                    }
-                    break;
-
-            }
-            if (!matched) {
-                sender.transmit("NOT RECOGNIZED");
+                        break;
+                }
+                if (!matched) {
+                    sender.transmit("NOT RECOGNIZED");
+                }
+            } catch (Throwable t) {
+                sender.transmit("ERROR " + t.getClass().getName());
             }
         }
     }
 
     private void assignScores() {
         for (OhHckServer.ServerThread c : clients) {
-            if (c.getTricks() == c.getBid()) {
-                c.addScore(10 + c.getBid());
+            if (c.player().getTricks() == c.player().getBid()) {
+                c.player().addScore(10 + c.player().getBid());
             }
         }
     }
@@ -177,8 +184,10 @@ public class OhHckGame {
             }
         });
         OhHckServer.ServerThread t = played.get(played.size() - 1).playedBy;
-        t.setTricks(true);
-        return t.getPlayerName();
+        t.player().setTricks(true);
+        plon = clients.indexOf(t);
+        nsp = plon;
+        return t.player().getPlayerName();
     }
 
     private int bidRestriction(int clindex) {
@@ -201,9 +210,9 @@ public class OhHckGame {
             ret.append("RESULTS [");
         }
         for (OhHckServer.ServerThread c : clients) {
-            ret.append(c.getPlayerName());
+            ret.append(c.player().getPlayerName());
             ret.append('=');
-            ret.append(c.getScore());
+            ret.append(c.player().getScore());
             ret.append(", ");
         }
         return ret.substring(0, ret.length() - 2) + ']';
@@ -212,22 +221,22 @@ public class OhHckGame {
     private void updateBidTotal() {
         bidTotal = 0;
         for (OhHckServer.ServerThread c : clients) {
-            if (c.getBid() != -1) {
-                bidTotal += c.getBid();
+            if (c.player().getBid() != -1) {
+                bidTotal += c.player().getBid();
             }
         }
     }
 
     private void eraseBids() {
         for (OhHckServer.ServerThread c : clients) {
-            c.setBid(-1);
+            c.player().setBid(-1);
         }
         updateBidTotal();
     }
 
     private void clearTricks() {
         for (OhHckServer.ServerThread c : clients) {
-            c.setTricks(false);
+            c.player().setTricks(false);
         }
     }
 
@@ -235,9 +244,9 @@ public class OhHckGame {
         StringBuilder ret = new StringBuilder();
         ret.append("BIDS [");
         for (OhHckServer.ServerThread c : clients) {
-            ret.append(c.getPlayerName());
+            ret.append(c.player().getPlayerName());
             ret.append('=');
-            ret.append(c.getBid());
+            ret.append(c.player().getBid());
             ret.append(", ");
         }
         return ret.substring(0, ret.length() - 2) + ']';
@@ -264,7 +273,7 @@ public class OhHckGame {
 
         @Override
         public String toString() {
-            return playedBy.getPlayerName() + "=" + card.toString();
+            return playedBy.player().getPlayerName() + "=" + card.toString();
         }
     }
 
