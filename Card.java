@@ -36,6 +36,31 @@ public class Card {
             default:
                 ret += Integer.toString(rank);
         }
-        return ret + " of " + suit.name();
+        return ret + "of" + suit.name();
+    }
+
+    public Suit getSuit() {
+        return suit;
+    }
+
+    public int getRank() {
+        return rank;
+    }
+
+    public static Card fromString(String str) {
+        String rs = str.substring(0, str.indexOf('o'));
+        int r;
+        if (rs.equals("JACK")) {
+            r = 11;
+        } else if (rs.equals("QUEEN")) {
+            r = 12;
+        } else if (rs.equals("KING")) {
+            r = 13;
+        } else if (rs.equals("ACE")) {
+            r = 14;
+        } else {
+            r = Integer.parseInt(rs);
+        }
+        return new Card(Suit.valueOf(str.substring(str.indexOf('f') + 1)), r);
     }
 }

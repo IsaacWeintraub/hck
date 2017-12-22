@@ -3,7 +3,15 @@ import java.util.LinkedList;
 
 public class Deck extends LinkedList<Card> {
 
+    private int number;
+
     public Deck(int number) {
+        this.number = number;
+        reset();
+    }
+
+    public void reset() {
+        clear();
         for (int d = 0; d < number; d++) {
             addDeck();
         }

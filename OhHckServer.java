@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
 
 public class OhHckServer  {
 
@@ -48,6 +46,8 @@ public class OhHckServer  {
         private PrintWriter out;
         private int score;
         private String playerName;
+        private int bid;
+        private int tricks;
 
         public ServerThread(Socket socket) {
             super("OhHckServer.ServerThread$" + currentPlayers);
@@ -55,6 +55,8 @@ public class OhHckServer  {
             currentPlayers++;
             this.score = 0;
             this.playerName = "";
+            this.bid = 0;
+            this.tricks = 0;
             game.addClient(this);
         }
 
@@ -74,6 +76,26 @@ public class OhHckServer  {
                 in.close();
             } catch (IOException e) {}
             currentPlayers--;
+        }
+
+        protected void setTricks(boolean addOrClear) {
+            if (addOrClear) {
+                tricks += 1;
+            } else {
+                tricks = 0;
+            }
+        }
+
+        public int getTricks() {
+            return tricks;
+        }
+
+        public int getBid() {
+            return bid;
+        }
+
+        protected void setBid(int value) {
+            bid = value;
         }
 
         public String getPlayerName() {
