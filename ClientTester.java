@@ -2,13 +2,13 @@ import java.util.Scanner;
 
 public class ClientTester {
 
-    static OhHckClient client;
+    static ClientSidePlayer player;
 
     public static void main(String[] args) throws Exception {
         InputParser p = new InputParser();
         p.start();
-        client = new OhHckClient("192.168.0.24");
-        client.start();
+        player = new ClientSidePlayer("192.168.0.24");
+        player.client().start();
         p.stahp();
     }
 
@@ -29,7 +29,7 @@ public class ClientTester {
         public void run() {
             while (!stopped) {
                 if (input.hasNext()) {
-                    client.transmit(input.nextLine());
+                    player.client().transmit(input.nextLine());
                 }
             }
         }

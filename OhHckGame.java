@@ -52,13 +52,13 @@ public class OhHckGame {
                     case WAITING:
                         if (input.length() >= 6
                                 && input.substring(0, 6).equals("START ")
-                                && sender == clients.get(0) /*&& sender.size() >= 3*/) {
-                            state = State.STARTED;
+                                && sender == clients.get(0) && clients.size() >= 3) {
                             upperLimit = Integer.parseInt(
                                 input.substring(input.lastIndexOf(' ') + 1));
                             deck = new Deck(Integer.parseInt(input.substring(
                                 input.indexOf(' ') + 1, input.indexOf(' ') + 2)));
                             matched = true;
+                            state = State.STARTED;
                             transmitAll(scores());
                             dealer = (int) (Math.random() * clients.size());
                             clients.get(dealer).transmit("DEALER");
@@ -66,6 +66,8 @@ public class OhHckGame {
                         break;
                     case STARTED:
                         if (input.equals("BEGDEAL") && sender == clients.get(dealer)) {
+                            matched = true;
+                            state = State.BIDDING;
                             for (int i = 0; i < numCards; i++) {
                                 for (int j = 0; j < clients.size(); j++) {
                                     clients.get((dealer + j + 1) % clients.size())
@@ -73,11 +75,9 @@ public class OhHckGame {
                                 }
                             }
                             eraseBids();
-                            matched = true;
                             transmitAll(bids());
                             clients.get((dealer + 1) % clients.size())
                                 .transmit("PLACEBID " + bidRestriction(dealer + 1));
-                            state = State.BIDDING;
                             plon = dealer + 1;
                             nsp = plon % clients.size();
                         }
@@ -119,7 +119,6 @@ public class OhHckGame {
                             } else {
                                 transmitAll("TRICK " + winner());
                                 ctr++;
-                                System.out.println("ctr = " + ctr);
                                 if (ctr < numCards) {
                                     played.clear();
                                     transmitAll("PLAYED " + played);

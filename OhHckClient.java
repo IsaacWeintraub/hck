@@ -10,17 +10,20 @@ public class OhHckClient {
     private PrintWriter out;
     private Socket socket;
     private BufferedReader in;
+    private ClientSidePlayer player;
 
-    public OhHckClient(String host) throws UnknownHostException, IOException {
+    public OhHckClient(String host, ClientSidePlayer player)
+            throws UnknownHostException, IOException {
         socket = new Socket(host, OhHckServer.PORT);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        this.player = player;
     }
 
     public void start() throws IOException {
         String fromServer;
         while ((fromServer = in.readLine()) != null) {
-            handleResponse(fromServer);
+            player.process(fromServer);
             if (fromServer.equals("STOP")) {
                 break;
             }
@@ -28,10 +31,6 @@ public class OhHckClient {
         socket.close();
         out.close();
         in.close();
-    }
-
-    public void handleResponse(String response) {
-        System.out.println("response: " + response);
     }
 
     protected void transmit(String message) {

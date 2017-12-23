@@ -8,20 +8,42 @@ import java.net.Socket;
 public class OhHckServer  {
 
     public static final int PORT = 6969;
+    public static final int INFO_PORT = 6970;
 
-    private String name;
+    private String serverName;
     private int maxPlayers;
     private int currentPlayers;
     private OhHckGame game;
     private boolean shouldContinue;
+    private String hostName;
+    private boolean itOpen;
 
     public static void main(String[] args) throws Exception {
-        OhHckServer server = new OhHckServer("Grsnt", 6);
+        String sname = "H*ck my life";
+        int numPlayers = 8;
+        String host = "Isaac";
+        switch (args.length) {
+            case 3:
+                host = args[2];
+            case 2:
+                numPlayers = Integer.parseInt(args[1]);
+            case 1:
+                sname = args[0];
+            default:
+                break;
+        }
+        OhHckServer server = new OhHckServer(sname, numPlayers, host);
     }
 
-    public OhHckServer(String name, int maxPlayers) throws IOException {
-        this.name = name;
-        this.maxPlayers = maxPlayers;
+    public OhHckServer(String name, int maxPlayers, String host)
+            throws IOException {
+        if (maxPlayers < 3) {
+            throw new IllegalArgumentException("Max players too low: " + maxPlayers);
+        }
+        this.serverName = name;
+        this.hostName = host;
+        this.itOpen = true;
+        this.maxPlayers = (maxPlayers > 16) ? 16 : maxPlayers;
         this.currentPlayers = 0;
         this.game = new OhHckGame();
         shouldContinue = true;
@@ -29,6 +51,7 @@ public class OhHckServer  {
 
         ServerSocket serverSocket = null;
         serverSocket = new ServerSocket(PORT);
+        (new InfoThread()).start();
         while (shouldContinue) {
             while (currentPlayers < maxPlayers && shouldContinue) {
                 (new ServerThread(serverSocket.accept())).start();
@@ -39,6 +62,29 @@ public class OhHckServer  {
         }
     }
 
+    public class InfoThread extends Thread {
+
+        public InfoThread() {
+            super("OhHckServer$InfoThread");
+        }
+
+        @Override
+        public void run() {
+            try {
+                ServerSocket ss = new ServerSocket(INFO_PORT);
+                while (itOpen) {
+                    Socket s = ss.accept();
+                    PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                    out.println(
+                        String.format("NAME=%s HOST=%s PLAYERS=%d/%d",
+                        serverName, hostName, currentPlayers, maxPlayers));
+                    s.close();
+                    out.close();
+                }
+                ss.close();
+            } catch (IOException e) {}
+        }
+    }
 
     public class ServerThread extends Thread {
 
@@ -51,7 +97,7 @@ public class OhHckServer  {
         private ServerSidePlayer player;
 
         public ServerThread(Socket socket) {
-            super("OhHckServer.ServerThread$" + currentPlayers);
+            super("OhHckServer$ServerThread-" + currentPlayers);
             this.socket = socket;
             currentPlayers++;
             this.player = new ServerSidePlayer();

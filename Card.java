@@ -13,6 +13,9 @@ public class Card {
     private int rank;
 
     public Card(Suit suit, int rank) {
+        if (rank < 2 || rank > 14) {
+            throw new IllegalArgumentException("Bad rank: " + rank);
+        }
         this.suit = suit;
         this.rank = rank;
     }
