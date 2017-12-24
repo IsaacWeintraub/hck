@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -19,9 +20,9 @@ public class OhHckServer  {
     private boolean itOpen;
 
     public static void main(String[] args) throws Exception {
-        String sname = "H*ck my life";
+        String sname = "HELL this hElLing Hell to hELl";
         int numPlayers = 8;
-        String host = "Isaac";
+        String host = "HelL's hell";
         switch (args.length) {
             case 3:
                 host = args[2];
@@ -75,9 +76,10 @@ public class OhHckServer  {
                 while (itOpen) {
                     Socket s = ss.accept();
                     PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-                    out.println(
-                        String.format("NAME=%s HOST=%s PLAYERS=%d/%d",
-                        serverName, hostName, currentPlayers, maxPlayers));
+                    out.println(String.format(
+                        "NAME=%s HOST=%s PLAYERS=%d/%d IPADDRESS=%s",
+                        serverName, hostName, currentPlayers, maxPlayers,
+                        InetAddress.getLocalHost().getHostAddress()));
                     s.close();
                     out.close();
                 }

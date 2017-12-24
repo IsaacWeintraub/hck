@@ -129,7 +129,7 @@ public class OhHckGui extends Application {
         return table;
     }
 
-    public class HckFormatter implements Callable<String> {
+    public static class HckFormatter implements Callable<String> {
 
         private String argument;
 
@@ -139,7 +139,8 @@ public class OhHckGui extends Application {
 
         @Override
         public String call() {
-            return argument.replaceAll("\\$", hword.getValue());
+            return argument.replaceAll("\\$", hword.getValue())
+                .replaceAll("%", hword.getValue().toLowerCase());
         }
 
     }

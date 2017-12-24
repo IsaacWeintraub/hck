@@ -20,7 +20,8 @@ public class ServerSearcher extends Thread {
         try {
             String hostName = InetAddress.getLocalHost().getHostAddress();
             String hnPart = hostName.substring(0, hostName.lastIndexOf('.') + 1);
-            for (int i = 2; i < 256; i++) {
+            for (int i = 2; i < 255; i++) {
+                System.out.println("i = " + i);
                 Socket sock = null;
                 try {
                     InetAddress test = InetAddress.getByName(
