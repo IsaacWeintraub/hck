@@ -92,10 +92,7 @@ public class OhHckServer  {
 
         private Socket socket;
         private PrintWriter out;
-        private int score;
         private String playerName;
-        private int bid;
-        private int tricks;
         private ServerSidePlayer player;
 
         public ServerThread(Socket socket) {

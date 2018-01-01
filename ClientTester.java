@@ -8,8 +8,7 @@ public class ClientTester {
         InputParser p = new InputParser();
         p.start();
         player = new ClientSidePlayer("192.168.0.24");
-        player.client().start();
-        p.stahp();
+        //p.stahp();
     }
 
     static class InputParser extends Thread {
@@ -19,7 +18,7 @@ public class ClientTester {
         static int num = 1;
 
         public InputParser() {
-            super("ClientTester.InputParser$" + num);
+            super("ClientTester$InputParser-" + num);
             num++;
             input = new Scanner(System.in);
             stopped = false;

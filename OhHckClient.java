@@ -5,7 +5,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class OhHckClient {
+public class OhHckClient extends Thread {
 
     private PrintWriter out;
     private Socket socket;
@@ -13,24 +13,29 @@ public class OhHckClient {
     private ClientSidePlayer player;
 
     public OhHckClient(String host, ClientSidePlayer player)
-            throws UnknownHostException, IOException {
+            throws IOException {
         socket = new Socket(host, OhHckServer.PORT);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.player = player;
     }
 
-    public void start() throws IOException {
-        String fromServer;
-        while ((fromServer = in.readLine()) != null) {
-            player.process(fromServer);
-            if (fromServer.equals("STOP")) {
-                break;
+    @Override
+    public void run() {
+        try {
+            String fromServer;
+            while ((fromServer = in.readLine()) != null) {
+                player.process(fromServer);
+                if (fromServer.equals("STOP")) {
+                    break;
+                }
             }
+            socket.close();
+            out.close();
+            in.close();
+        } catch (IOException e) {
+            player.process("CLIENT ERROR " + e.getClass().getName());
         }
-        socket.close();
-        out.close();
-        in.close();
     }
 
     protected void transmit(String message) {

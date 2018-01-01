@@ -21,6 +21,15 @@ public class Card {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Card)) {
+            return false;
+        }
+        Card that = (Card) o;
+        return this.suit == that.suit && this.rank == that.rank;
+    }
+
+    @Override
     public String toString() {
         String ret = "";
         switch (rank) {
