@@ -25,16 +25,32 @@ public class ServerData {
         return name.get();
     }
 
+    public StringProperty nameProperty() {
+        return name;
+    }
+
     public String getHost() {
         return host.get();
+    }
+
+    public StringProperty hostProperty() {
+        return host;
     }
 
     public String getPlayers() {
         return players.get();
     }
 
+    public StringProperty playersProperty() {
+        return players;
+    }
+
     public String getIpAddress() {
         return ipAddress.get();
+    }
+
+    public StringProperty ipAddressProperty() {
+        return ipAddress;
     }
 
     public static ServerData of(String input) {

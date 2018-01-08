@@ -34,7 +34,6 @@ public class OhHckGame {
 
     // SCRAPPY STATE MACHINE
     public void process(String input, OhHckServer.ServerThread sender) {
-        System.out.println("Processing: " + input);
         if (input == null) {
             if (state == State.WAITING) {
                 sender.player().setPlayerName(

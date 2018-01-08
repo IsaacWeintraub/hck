@@ -18,8 +18,11 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
@@ -28,7 +31,9 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.function.Predicate;
 
 public class OhHckGui extends Application {
 
@@ -42,7 +47,7 @@ public class OhHckGui extends Application {
 
     private Scene starting;
     private Stage stage;
-    private StringProperty serverSays = new SimpleStringProperty("Server says...");
+    private int counter = 0;
 
     @Override
     public void start(Stage stage) {
@@ -96,10 +101,8 @@ public class OhHckGui extends Application {
             hword));
         instructions.setEditable(false);
         instructions.setPrefSize(SCREEN_WIDTH * 0.75, SCREEN_HEIGHT * 0.5);
-        Button backButton = new Button("Back");
-        backButton.setOnAction(e -> stage.setScene(starting));
         components.setSpacing(SCREEN_HEIGHT / 108);
-        components.getChildren().addAll(text, instructions, backButton);
+        components.getChildren().addAll(text, instructions, backButton());
         components.setAlignment(Pos.TOP_CENTER);
         Scene instr = new Scene(components);
         stage.setScene(instr);
@@ -113,17 +116,39 @@ public class OhHckGui extends Application {
         Button refreshButton = new Button("Refresh");
         refreshButton.setOnAction(e -> table.setItems(findServers()));
         Button createButton = new Button("Create Server");
-        createButton.setOnAction(e -> System.out.println("create server"));
+        createButton.setOnAction(e -> {
+            HBox ownerConts = new HBox();
+            Text snlabel = new Text("Server name: ");
+            TextField snfield = new TextField();
+            Text hnlabel = new Text("Host name: ");
+            TextField hnfield = new TextField();
+            Text mplabel = new Text("Maximum players: ");
+            Spinner<Integer> npSelector = new Spinner<>(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 16));
+            Button startButton = new Button("Start server");
+            startButton.disableProperty().bind(Bindings.or(Bindings.isEmpty(
+                snfield.textProperty()), Bindings.isEmpty(hnfield.textProperty())));
+            startButton.setOnAction(me -> beginServer(
+                snfield.getText(), npSelector.getValue(), hnfield.getText()));
+            ownerConts.getChildren().addAll(snlabel, snfield, hnlabel, hnfield, mplabel, npSelector, startButton);
+            components.getChildren().add(2, ownerConts);
+        });
         Button connectButton = new Button("Connect to Server");
         connectButton.setOnAction(e -> beginGame(table.getSelectionModel()
-            .selectedItemProperty().getValue().getIpAddress()));
+            .getSelectedItem().getIpAddress()));
         connectButton.disableProperty().bind(
-            Bindings.isNull(table.getSelectionModel().selectedItemProperty()));
-        Button backButton = new Button("Back");
-        backButton.setOnAction(e -> stage.setScene(starting));
+            Bindings.createBooleanBinding(() -> {
+                ServerData sd = table.getSelectionModel().getSelectedItem();
+                if (sd != null) {
+                    String[] strs = sd.getPlayers().split("/");
+                    return strs[0].equals(strs[1]);
+                } else {
+                    return true;
+                }
+            }, table.getSelectionModel().selectedItemProperty()));
         HBox buttons = new HBox();
         buttons.getChildren().addAll(refreshButton, createButton, connectButton,
-            backButton);
+            backButton());
         components.setSpacing(SCREEN_HEIGHT / 108);
         components.getChildren().addAll(text, table, buttons);
         components.setAlignment(Pos.TOP_CENTER);
@@ -131,25 +156,60 @@ public class OhHckGui extends Application {
         stage.setScene(serverBrowser);
     }
 
-    protected void handle(String input) {
-        serverSays.set(input);
+    private Button backButton() {
+        Button b = new Button("Back");
+        b.setOnAction(e -> stage.setScene(starting));
+        return b;
+    }
+
+    private void beginServer(String name, int maxPlayers, String host) {
+        OhHckServer serv = new OhHckServer(name, maxPlayers, host);
+        serv.start();
+        VBox components = new VBox();
+        Button startButton = new Button("Continue");
+        Spinner<Integer> mlSelector = new Spinner<>(
+            new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 15));
+        Text mlabel = new Text("Upper limit (maximum number of tricks in a round): ");
+        HBox maxLimit = new HBox(mlabel, mlSelector);
+        Spinner<Integer> dnSelector = new Spinner<>(
+            new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 9));
+        Text dlabel = new Text("Number of decks in play: ");
+        HBox deckNumber = new HBox(dlabel, dnSelector);
+        startButton.setOnAction(e -> beginGame("127.0.0.1", true,
+            dnSelector.getValue(), mlSelector.getValue()));
+        components.getChildren().addAll(maxLimit, deckNumber, startButton, backButton());
+        Scene beginning = new Scene(components);
+        stage.setScene(beginning);
     }
 
     private void beginGame(String ipAddress) {
+        beginGame(ipAddress, false, -1, -1);
+    }
+
+    private void beginGame(String ipAddress, boolean privileged, int decks, int maxTricks) {
         VBox components = new VBox();
         VBox game = new VBox();
-        Button backButton = new Button("Back");
-        backButton.setOnAction(e -> stage.setScene(starting));
-        components.getChildren().addAll(game, backButton);
+        components.getChildren().addAll(game, backButton());
         try {
-            ClientSidePlayer player = new ClientSidePlayer(ipAddress, this);
+            ClientSidePlayer player = new ClientSidePlayer(ipAddress);
             Text scoreView = new Text();
+            ObservableList<Node> gameComponents =
+                FXCollections.observableList(new ArrayList<>(20));
+            for (int i = 0; i < 20; i++) {
+                gameComponents.add(null);
+            }
+            if (privileged) {
+                Button psButton = new Button("Start Game");
+                psButton.setOnAction(e -> {
+                    psButton.setVisible(false);
+                    player.sendToServer("START " + decks + " " + maxTricks);
+                });
+                gameComponents.set(0, psButton);
+            }
             scoreView.textProperty().bind(Bindings.createStringBinding(
                 () -> (player.getScore() == -1) ? "Waiting for game to start."
                 : "Your score is " + player.getScore(), player.scoreProperty()));
-            TextArea fromServer = new TextArea();
-            fromServer.textProperty().bind(serverSays);
-            fromServer.setEditable(false);
+            gameComponents.set(1, scoreView);
             HBox dealerConts = new HBox();
             HBox clientConts = new HBox();
             Text dlabel = new Text("You are the dealer for this round.");
@@ -160,55 +220,61 @@ public class OhHckGui extends Application {
             });
             dealButton.disableProperty().bind(player.dealtProperty());
             dealerConts.visibleProperty().bind(player.dealingProperty());
-            dealerConts.visibleProperty().addListener((c, o, n) -> {
-                Platform.runLater(() -> {
-                    if (n) {
-                        game.getChildren().add(game.getChildren().indexOf(scoreView) + 1,
-                            dealerConts);
-                    } else {
-                        game.getChildren().remove(dealerConts);
-                    }
-                });
+            dealButton.disabledProperty().addListener((c, o, n) -> {
+                if (!n) {
+                    dealerConts.getChildren().add(1, dealButton);
+                } else {
+                    dealerConts.getChildren().remove(dealButton);
+                }
             });
             dealerConts.getChildren().addAll(dlabel, dealButton);
+            gameComponents.set(2, dealerConts);
             VBox handConts = new VBox();
             Text hlabel = new Text("Your hand:");
-            HBox handView = new HBox();
+            FlowPane handView = new FlowPane();
             player.getHand().addListener(
-                (ListChangeListener.Change<? extends Card> ch) -> {
+                (ListChangeListener.Change<? extends NumberedCard> ch) -> {
                 while (ch.next()) {
                     if (ch.wasAdded()) {
-                        for (Card card : ch.getAddedSubList()) {
+                        for (NumberedCard card : ch.getAddedSubList()) {
                             Platform.runLater(() -> {
                                 CardGraphic cg = new CardGraphic(card);
                                 cg.setOnMouseClicked(e -> {
                                     if (player.isPlaying() && player.canPlay(cg.card())) {
-                                        player.sendToServer("PLAYING " + cg.card());
+                                        player.sendToServer("PLAYING " + cg);
                                     }
                                 });
                                 cg.opacityProperty().bind(Bindings.createDoubleBinding(
-                                    () -> player.canPlay(cg.card()) ? 1.0 : 0.5,
-                                    player.getPlayed()));
+                                    () -> {
+                                        if (player.isPlaying()) {
+                                            return player.canPlay(cg.card()) ? 1.0 : 0.5;
+                                        } else {
+                                            return 1.0;
+                                        }
+                                    }, player.getPlayed()));
                                 handView.getChildren().add(cg);
                             });
                         }
                     } else if (ch.wasRemoved()) {
-                        for (Card card : ch.getRemoved()) {
-                            Platform.runLater(() -> handView.getChildren().remove(new CardGraphic(card)));
-                        }
+                        Platform.runLater(() -> {
+                            for (NumberedCard card : ch.getRemoved()) {
+                                ObservableList<Node> children = handView.getChildren();
+                                CardGraphic graphic = new CardGraphic(card);
+                                for (int i = 0; i < children.size(); i++) {
+                                    if (children.get(i).equals(graphic)) {
+                                        children.remove(i);
+                                        break;
+                                    }
+                                }
+                            }
+                        });
                     }
                 }
             });
+            handView.maxWidthProperty().bind(stage.widthProperty());
             handConts.getChildren().addAll(hlabel, handView);
             handConts.visibleProperty().bind(Bindings.not(Bindings.isEmpty(handView.getChildren())));
-            handConts.visibleProperty().addListener((c, o, n) -> {
-                if (n) {
-                    int x = game.getChildren().indexOf(dealerConts);
-                    game.getChildren().add(((x == -1) ? game.getChildren().indexOf(scoreView) : x) + 1, handConts);
-                } else {
-                    game.getChildren().remove(handConts);
-                }
-            });
+            gameComponents.set(3, handConts);
             Text bidtotalabel = new Text();
             bidtotalabel.textProperty().bind(Bindings.createStringBinding(
                 () -> "Total bids placed: " + player.getBidTotal(),
@@ -219,7 +285,7 @@ public class OhHckGui extends Application {
                 player.bidProperty()));
             HBox bidConts = new HBox();
             SpinnerValueFactory.IntegerSpinnerValueFactory svf =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 1, 0);
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 1);
             svf.maxProperty().bind(Bindings.size(handView.getChildren()));
             Spinner<Integer> bidSelector = new Spinner<>(svf);
             Button bidButton = new Button();
@@ -232,20 +298,24 @@ public class OhHckGui extends Application {
                 ? "You can't bid " + bidSelector.getValue() : "Set bid",
                 bidSelector.valueProperty()/*, player.bidRestrictionProperty()*/));
             bidConts.getChildren().addAll(bidlabel, bidSelector, bidButton);
+            gameComponents.set(4, bidtotalabel);
+            gameComponents.set(5, bidConts);
             bidButton.visibleProperty().bind(player.biddingProperty());
             bidSelector.visibleProperty().bind(player.biddingProperty());
             Text pprompt = new Text("Play a card.");
             pprompt.visibleProperty().bind(player.playingProperty());
-            HBox playedView = new HBox();
+            gameComponents.set(6, pprompt);
+            FlowPane playedView = new FlowPane();
+            playedView.maxWidthProperty().bind(stage.widthProperty());
             player.getPlayed().addListener(
-                (ListChangeListener.Change<? extends Card> ch) -> {
+                (ListChangeListener.Change<? extends NumberedCard> ch) -> {
                 while (ch.next()) {
                     if (ch.wasAdded()) {
-                        for (Card card : ch.getAddedSubList()) {
+                        for (NumberedCard card : ch.getAddedSubList()) {
                             Platform.runLater(() -> playedView.getChildren().add(new CardGraphic(card)));
                         }
                     } else if (ch.wasRemoved()) {
-                        for (Card card : ch.getRemoved()) {
+                        for (NumberedCard card : ch.getRemoved()) {
                             Platform.runLater(() -> playedView.getChildren().remove(new CardGraphic(card)));
                         }
                     }
@@ -259,14 +329,20 @@ public class OhHckGui extends Application {
             Text tlabel = new Text("You took this trick");
             tlabel.visibleProperty().bind(Bindings.equal(player.tookTrickProperty(),
                 player.getName()));
-            TextField fromClient = new TextField("Send to server...");
-            Button sendButton = new Button("Send");
-            sendButton.disableProperty().bind(Bindings.or(
-                Bindings.isEmpty(fromClient.textProperty()),
-                Bindings.equal("Send to server...", fromClient.textProperty())));
-            sendButton.setOnAction(e -> player.client().transmit(fromClient.getText()));
-            clientConts.getChildren().addAll(fromClient, sendButton);
-            game.getChildren().addAll(scoreView, bidtotalabel, bidConts, pprompt, tricks, tlabel, plabel, playedView, fromServer, clientConts);
+            gameComponents.set(7, tricks);
+            gameComponents.set(8, tlabel);
+            gameComponents.set(9, plabel);
+            gameComponents.set(10, playedView);
+            for (Node node : gameComponents) {
+                if (node != null) {
+                    node.visibleProperty().addListener((c, o, n) ->
+                        Platform.runLater(() -> game.getChildren().setAll(
+                            gameComponents.filtered(
+                                d -> d != null && d.isVisible()))));
+                }
+            }
+            game.getChildren().setAll(gameComponents.filtered(
+                d -> d != null && d.isVisible()));
         } catch (IOException err) {
             Text etext = new Text("An error occurred.");
             Button deetsButton = new Button("Details");
@@ -290,7 +366,7 @@ public class OhHckGui extends Application {
             game.setMinSize(SCREEN_WIDTH * 0.6, SCREEN_HEIGHT * 0.55);
             game.getChildren().addAll(etext, deetsButton);
         }
-        game.setMinHeight(SCREEN_HEIGHT * 0.5);
+        game.setMinSize(SCREEN_WIDTH * 0.3, SCREEN_HEIGHT * 0.4);
         Scene playingGame = new Scene(components);
         stage.setScene(playingGame);
     }

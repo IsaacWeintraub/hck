@@ -15,24 +15,18 @@ public class ClientSidePlayer {
     private IntegerProperty score = new SimpleIntegerProperty(this, "NA");
     private BooleanProperty dealing = new SimpleBooleanProperty(this, "NA");
     private BooleanProperty dealt = new SimpleBooleanProperty(this, "NA");
-    private ObservableList<Card> hand = FXCollections.observableArrayList();
+    private ObservableList<NumberedCard> hand = FXCollections.observableArrayList();
     private IntegerProperty bidTotal = new SimpleIntegerProperty(this, "NA");
     private IntegerProperty bid = new SimpleIntegerProperty(this, "NA");
     private IntegerProperty bidRestriction = new SimpleIntegerProperty(this, "NA");
     private BooleanProperty bidding = new SimpleBooleanProperty(this, "NA");
     private BooleanProperty playing = new SimpleBooleanProperty(this, "NA");
-    private ObservableList<Card> played = FXCollections.observableArrayList();
+    private ObservableList<NumberedCard> played = FXCollections.observableArrayList();
     private IntegerProperty tricks = new SimpleIntegerProperty(this, "NA");
     private StringProperty tookTrick = new SimpleStringProperty(this, "NA");
     private OhHckClient client;
-    private OhHckGui gui;
 
     public ClientSidePlayer(String host) throws IOException {
-        this(host, null);
-    }
-
-    public ClientSidePlayer(String host, OhHckGui gui) throws IOException {
-        this.gui = gui;
         score.set(-1);
         dealing.set(false);
         dealt.set(false);
@@ -75,7 +69,7 @@ public class ClientSidePlayer {
         return dealt.get();
     }
 
-    public ObservableList<Card> getHand() {
+    public ObservableList<NumberedCard> getHand() {
         return hand;
     }
 
@@ -119,7 +113,7 @@ public class ClientSidePlayer {
         return playing.get();
     }
 
-    public ObservableList<Card> getPlayed() {
+    public ObservableList<NumberedCard> getPlayed() {
         return played;
     }
 
@@ -165,7 +159,10 @@ public class ClientSidePlayer {
         String command = output.substring(0, (x = output.indexOf(' ')) == -1
             ? output.length() : x);
         if (command.equals("PLAYING")) {
-            hand.remove(Card.fromString(output.substring(8)));
+            hand.remove(new NumberedCard(
+                Card.fromString(output.substring(8, output.indexOf('$'))),
+                Long.parseLong(output.substring(output.indexOf('$') + 1))));
+            output = output.substring(0, output.indexOf('$'));
         } else if (command.equals("BID")) {
             bid.set(Integer.parseInt(output.substring(4)));
         }
@@ -190,7 +187,7 @@ public class ClientSidePlayer {
             dealt.set(false);
         } else if (command.equals("DEAL")) {
             played.clear();
-            hand.add(Card.fromString(input.substring(5)));
+            hand.add(new NumberedCard(Card.fromString(input.substring(5))));
             bid.set(-1);
             tricks.set(0);
             tookTrick.set("");
@@ -220,20 +217,15 @@ public class ClientSidePlayer {
             for (int i = 1; i < strs.length; i++) {
                 int y;
                 int end = ((y = strs[i].indexOf(',')) == -1) ? strs[i].indexOf(']') : y;
-                played.add(Card.fromString(strs[i].substring(0, end)));
+                played.add(new NumberedCard(Card.fromString(strs[i].substring(0, end))));
             }
         } else if (command.equals("PLAY")) {
             playing.set(true);
         } else if (command.equals("TRICK")) {
             tookTrick.set(input.substring(6));
-            if (tookTrick.get().equals(getName())) {
-                tricks.add(1);
+            if (input.substring(6).equals(getName())) {
+                tricks.set(tricks.get() + 1);
             }
-        }
-        if (gui == null) {
-            System.out.println(input);
-        } else {
-            gui.handle(input);
         }
     }
 

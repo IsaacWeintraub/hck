@@ -5,12 +5,17 @@ public class CardGraphic extends ImageView {
     private Card card;
 
     public CardGraphic(Card card) {
-        super("images/" + card.toString() + ".bmp");
+        super("images/" + sanitize(card.toString()) + ".bmp");
         this.card = card;
     }
 
     public Card card() {
         return card;
+    }
+
+    @Override
+    public String toString() {
+        return card.toString();
     }
 
     @Override
@@ -20,5 +25,10 @@ public class CardGraphic extends ImageView {
         }
         CardGraphic that = (CardGraphic) o;
         return this.card.equals(that.card);
+    }
+
+    private static String sanitize(String input) {
+        int x = input.indexOf('$');
+        return (x == -1) ? input : input.substring(0, x);
     }
 }

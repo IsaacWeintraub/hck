@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class OhHckServer  {
+public class OhHckServer extends Thread {
 
     public static final int PORT = 6969;
     public static final int INFO_PORT = 6970;
@@ -19,48 +19,31 @@ public class OhHckServer  {
     private String hostName;
     private boolean itOpen;
 
-    public static void main(String[] args) throws Exception {
-        String sname = "HELL this hElLing Hell to hELl";
-        int numPlayers = 8;
-        String host = "HelL's hell";
-        switch (args.length) {
-            case 3:
-                host = args[2];
-            case 2:
-                numPlayers = Integer.parseInt(args[1]);
-            case 1:
-                sname = args[0];
-            default:
-                break;
-        }
-        OhHckServer server = new OhHckServer(sname, numPlayers, host);
-    }
-
-    public OhHckServer(String name, int maxPlayers, String host)
-            throws IOException {
-        if (maxPlayers < 3) {
-            throw new IllegalArgumentException("Max players too low: " + maxPlayers);
-        }
+    public OhHckServer(String name, int maxPlayers, String host) {
+        super("OhHckServer");
         this.serverName = name;
         this.hostName = host;
         this.itOpen = true;
-        this.maxPlayers = (maxPlayers > 16) ? 16 : maxPlayers;
+        this.maxPlayers = maxPlayers;
         this.currentPlayers = 0;
         this.game = new OhHckGame();
         shouldContinue = true;
-        /* initialize other fields? */
+    }
 
-        ServerSocket serverSocket = null;
-        serverSocket = new ServerSocket(PORT);
-        (new InfoThread()).start();
-        while (shouldContinue) {
-            while (currentPlayers < maxPlayers && shouldContinue) {
-                (new ServerThread(serverSocket.accept())).start();
+    @Override
+    public void run() {
+        try {
+            ServerSocket serverSocket = new ServerSocket(PORT);
+            (new InfoThread()).start();
+            while (shouldContinue) {
+                while (currentPlayers < maxPlayers && shouldContinue) {
+                    (new ServerThread(serverSocket.accept())).start();
+                }
             }
-        }
-        if (serverSocket != null) {
-            serverSocket.close();
-        }
+            if (serverSocket != null) {
+                serverSocket.close();
+            }
+        } catch (IOException e) {}
     }
 
     public class InfoThread extends Thread {
