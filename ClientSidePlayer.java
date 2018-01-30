@@ -7,7 +7,7 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import java.io.IOException;
-import java.util.Map;
+import java.util.Arrays;
 
 public class ClientSidePlayer {
 
@@ -24,6 +24,8 @@ public class ClientSidePlayer {
     private ObservableList<NumberedCard> played = FXCollections.observableArrayList();
     private IntegerProperty tricks = new SimpleIntegerProperty(this, "NA");
     private StringProperty tookTrick = new SimpleStringProperty(this, "NA");
+    private BooleanProperty started = new SimpleBooleanProperty(this, "NA");
+    private IntegerProperty place = new SimpleIntegerProperty(this, "NA");
     private OhHckClient client;
 
     public ClientSidePlayer(String host) throws IOException {
@@ -133,6 +135,22 @@ public class ClientSidePlayer {
         return tookTrick.get();
     }
 
+    public BooleanProperty startedProperty() {
+        return started;
+    }
+
+    public boolean isStarted() {
+        return started.get();
+    }
+
+    public IntegerProperty placeProperty() {
+        return place;
+    }
+
+    public int getPlace() {
+        return place.get();
+    }
+
     public OhHckClient client() {
         return client;
     }
@@ -177,11 +195,12 @@ public class ClientSidePlayer {
         String command = input.substring(0, (x = input.indexOf(' ')) == -1
             ? input.length() : x);
         if (command.equals("SCORES")) {
+            started.set(true);
             dealing.set(false);
             int oset = input.indexOf(getName()) + getName().length() + 1;
             int i;
             score.set(Integer.parseInt(input.substring(oset,
-                (i = input.indexOf(',', oset)) == -1 ? input.indexOf(']') : i )));
+                (i = input.indexOf(',', oset)) == -1 ? input.indexOf(']') : i)));
         } else if (command.equals("DEALER")) {
             dealing.set(true);
             dealt.set(false);
@@ -225,6 +244,27 @@ public class ClientSidePlayer {
             tookTrick.set(input.substring(6));
             if (input.substring(6).equals(getName())) {
                 tricks.set(tricks.get() + 1);
+            }
+        } else if (command.equals("RESULTS")) {
+            started.set(false);
+            String[] strs = input.split("=");
+            int[] results = new int[strs.length - 1];
+            for (int i = 1; i < strs.length; i++) {
+                int y;
+                int end = ((y = strs[i].indexOf(',')) == -1) ? strs[i].indexOf(']') : y;
+                results[i - 1] = Integer.parseInt(strs[i].substring(0, end));
+            }
+            Arrays.sort(results);
+            for (int i = 1; i <= results.length; i++) {
+                if (results[results.length - i] == getScore()) {
+                    if (i < results.length && results[results.length - i]
+                            == results[results.length - i - 1]) {
+                        place.set(i + 64);
+                    } else {
+                        place.set(i);
+                    }
+                    break;
+                }
             }
         }
     }

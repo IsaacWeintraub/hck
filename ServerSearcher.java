@@ -17,6 +17,7 @@ public class ServerSearcher extends Thread {
 
     @Override
     public void run() {
+        System.out.println("ServerSearcher thread has entered run()");
         try {
             String hostName = InetAddress.getLocalHost().getHostAddress();
             String hnPart = hostName.substring(0, hostName.lastIndexOf('.') + 1);
@@ -42,6 +43,7 @@ public class ServerSearcher extends Thread {
                 } catch (IOException e) {}
             }
         } catch (Exception e) {}
+        System.out.println("ServerSearcher thread is returning from run()");
     }
 
     public ObservableList<ServerData> getServers() {

@@ -18,6 +18,7 @@ public class OhHckServer extends Thread {
     private boolean shouldContinue;
     private String hostName;
     private boolean itOpen;
+    private ServerSocket serverSocket;
 
     public OhHckServer(String name, int maxPlayers, String host) {
         super("OhHckServer");
@@ -32,18 +33,24 @@ public class OhHckServer extends Thread {
 
     @Override
     public void run() {
+        System.out.println("OhHckServer thread has entered run()");
         try {
-            ServerSocket serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(PORT);
             (new InfoThread()).start();
             while (shouldContinue) {
                 while (currentPlayers < maxPlayers && shouldContinue) {
-                    (new ServerThread(serverSocket.accept())).start();
+                    Socket sock = serverSocket.accept();
+                    ServerThread st = new ServerThread(sock);
+                    st.start();
                 }
             }
             if (serverSocket != null) {
                 serverSocket.close();
             }
-        } catch (IOException e) {}
+        } catch (IOException e) {
+            System.out.println("Exception in OhHckServer " + e.getStackTrace());
+        }
+        System.out.println("OhHckServer thread is returning from run()");
     }
 
     public class InfoThread extends Thread {
@@ -54,6 +61,7 @@ public class OhHckServer extends Thread {
 
         @Override
         public void run() {
+            System.out.println("OhHckServer$InfoThread thread has entered run()");
             try {
                 ServerSocket ss = new ServerSocket(INFO_PORT);
                 while (itOpen) {
@@ -68,6 +76,7 @@ public class OhHckServer extends Thread {
                 }
                 ss.close();
             } catch (IOException e) {}
+            System.out.println("OhHckServer$InfoThread thread is returning from run()");
         }
     }
 
@@ -88,6 +97,7 @@ public class OhHckServer extends Thread {
 
         @Override
         public void run() {
+            System.out.println("OhHckServer$ServerThread thread has entered run()");
             try {
                 out = new PrintWriter(socket.getOutputStream(), true);
                 BufferedReader in = new BufferedReader(
@@ -102,11 +112,15 @@ public class OhHckServer extends Thread {
                 in.close();
             } catch (IOException e) {}
             currentPlayers--;
+            System.out.println("OhHckServer$ServerThread thread is returning from run()");
         }
 
         protected void transmit(String message) {
-            if (message.equals("STOP")) {
+            if (message.contains("STOP")) {
                 shouldContinue = false;
+                try {
+                    serverSocket.close();
+                } catch (IOException e) {}
             }
             out.println(message);
         }

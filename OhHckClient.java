@@ -14,6 +14,7 @@ public class OhHckClient extends Thread {
 
     public OhHckClient(String host, ClientSidePlayer player)
             throws IOException {
+        super("OhHckClient");
         socket = new Socket(host, OhHckServer.PORT);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -22,6 +23,7 @@ public class OhHckClient extends Thread {
 
     @Override
     public void run() {
+        System.out.println("OhHckClient thread has entered run()");
         try {
             String fromServer;
             while ((fromServer = in.readLine()) != null) {
@@ -36,6 +38,7 @@ public class OhHckClient extends Thread {
         } catch (IOException e) {
             player.process("CLIENT ERROR " + e.getClass().getName());
         }
+        System.out.println("OhHckClient thread is returning from run()");
     }
 
     protected void transmit(String message) {

@@ -49,6 +49,10 @@ public class OhHckGui extends Application {
     private Stage stage;
     private int counter = 0;
 
+    public static void main(String[] args) {
+        launch(args);
+    }
+
     @Override
     public void start(Stage stage) {
         this.stage = stage;
@@ -135,7 +139,7 @@ public class OhHckGui extends Application {
         });
         Button connectButton = new Button("Connect to Server");
         connectButton.setOnAction(e -> beginGame(table.getSelectionModel()
-            .getSelectedItem().getIpAddress()));
+            .getSelectedItem().getIpAddress(), false));
         connectButton.disableProperty().bind(
             Bindings.createBooleanBinding(() -> {
                 ServerData sd = table.getSelectionModel().getSelectedItem();
@@ -165,47 +169,40 @@ public class OhHckGui extends Application {
     private void beginServer(String name, int maxPlayers, String host) {
         OhHckServer serv = new OhHckServer(name, maxPlayers, host);
         serv.start();
-        VBox components = new VBox();
-        Button startButton = new Button("Continue");
-        Spinner<Integer> mlSelector = new Spinner<>(
-            new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 15));
-        Text mlabel = new Text("Upper limit (maximum number of tricks in a round): ");
-        HBox maxLimit = new HBox(mlabel, mlSelector);
-        Spinner<Integer> dnSelector = new Spinner<>(
-            new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 9));
-        Text dlabel = new Text("Number of decks in play: ");
-        HBox deckNumber = new HBox(dlabel, dnSelector);
-        startButton.setOnAction(e -> beginGame("127.0.0.1", true,
-            dnSelector.getValue(), mlSelector.getValue()));
-        components.getChildren().addAll(maxLimit, deckNumber, startButton, backButton());
-        Scene beginning = new Scene(components);
-        stage.setScene(beginning);
+        beginGame("127.0.0.1", true);
     }
 
-    private void beginGame(String ipAddress) {
-        beginGame(ipAddress, false, -1, -1);
-    }
-
-    private void beginGame(String ipAddress, boolean privileged, int decks, int maxTricks) {
+    private void beginGame(String ipAddress, boolean privileged) {
         VBox components = new VBox();
         VBox game = new VBox();
         components.getChildren().addAll(game, backButton());
         try {
-            ClientSidePlayer player = new ClientSidePlayer(ipAddress);
-            Text scoreView = new Text();
             ObservableList<Node> gameComponents =
                 FXCollections.observableList(new ArrayList<>(20));
             for (int i = 0; i < 20; i++) {
                 gameComponents.add(null);
             }
+            ClientSidePlayer player = new ClientSidePlayer(ipAddress);
             if (privileged) {
+                VBox privComponents = new VBox();
+                Spinner<Integer> mlSelector = new Spinner<>(
+                    new SpinnerValueFactory.IntegerSpinnerValueFactory(2, 15));
+                Text mlabel = new Text("Upper limit (maximum number of tricks in a round): ");
+                HBox maxLimit = new HBox(mlabel, mlSelector);
+                Spinner<Integer> dnSelector = new Spinner<>(
+                    new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 9));
+                Text dlabel = new Text("Number of decks in play: ");
+                HBox deckNumber = new HBox(dlabel, dnSelector);
                 Button psButton = new Button("Start Game");
                 psButton.setOnAction(e -> {
-                    psButton.setVisible(false);
-                    player.sendToServer("START " + decks + " " + maxTricks);
+                    privComponents.setVisible(false);
+                    player.sendToServer("START "
+                        + dnSelector.getValue() + " " + mlSelector.getValue());
                 });
-                gameComponents.set(0, psButton);
+                privComponents.getChildren().addAll(deckNumber, maxLimit, psButton);
+                gameComponents.set(0, privComponents);
             }
+            Text scoreView = new Text();
             scoreView.textProperty().bind(Bindings.createStringBinding(
                 () -> (player.getScore() == -1) ? "Waiting for game to start."
                 : "Your score is " + player.getScore(), player.scoreProperty()));
@@ -219,14 +216,15 @@ public class OhHckGui extends Application {
                 player.sendToServer("BEGDEAL");
             });
             dealButton.disableProperty().bind(player.dealtProperty());
-            dealerConts.visibleProperty().bind(player.dealingProperty());
-            dealButton.disabledProperty().addListener((c, o, n) -> {
+            dealerConts.visibleProperty().bind(Bindings.and(
+                player.dealingProperty(), player.startedProperty()));
+          /*  dealButton.disabledProperty().addListener((c, o, n) -> {
                 if (!n) {
                     dealerConts.getChildren().add(1, dealButton);
                 } else {
                     dealerConts.getChildren().remove(dealButton);
                 }
-            });
+            });*/
             dealerConts.getChildren().addAll(dlabel, dealButton);
             gameComponents.set(2, dealerConts);
             VBox handConts = new VBox();
@@ -279,6 +277,7 @@ public class OhHckGui extends Application {
             bidtotalabel.textProperty().bind(Bindings.createStringBinding(
                 () -> "Total bids placed: " + player.getBidTotal(),
                 player.bidTotalProperty()));
+            bidtotalabel.visibleProperty().bind(player.startedProperty());
             Text bidlabel = new Text();
             bidlabel.textProperty().bind(Bindings.createStringBinding(
                 () -> (player.getBid() == -1) ? "Place your bid: " : "Your bid is " + player.getBid(),
@@ -298,6 +297,7 @@ public class OhHckGui extends Application {
                 ? "You can't bid " + bidSelector.getValue() : "Set bid",
                 bidSelector.valueProperty()/*, player.bidRestrictionProperty()*/));
             bidConts.getChildren().addAll(bidlabel, bidSelector, bidButton);
+            bidConts.visibleProperty().bind(player.startedProperty());
             gameComponents.set(4, bidtotalabel);
             gameComponents.set(5, bidConts);
             bidButton.visibleProperty().bind(player.biddingProperty());
@@ -322,10 +322,12 @@ public class OhHckGui extends Application {
                 }
             });
             Text plabel = new Text("Cards played:");
+            plabel.visibleProperty().bind(Bindings.not(Bindings.isEmpty(playedView.getChildren())));
             Text tricks = new Text();
             tricks.textProperty().bind(Bindings.createStringBinding(
                 () -> "Tricks taken: " + player.getTricks(),
                 player.tricksProperty()));
+            tricks.visibleProperty().bind(player.startedProperty());
             Text tlabel = new Text("You took this trick");
             tlabel.visibleProperty().bind(Bindings.equal(player.tookTrickProperty(),
                 player.getName()));
@@ -333,6 +335,28 @@ public class OhHckGui extends Application {
             gameComponents.set(8, tlabel);
             gameComponents.set(9, plabel);
             gameComponents.set(10, playedView);
+            Text rlabel = new Text();
+            rlabel.textProperty().bind(Bindings.createStringBinding(() -> {
+                String value = "You ";
+                boolean tied = player.getPlace() > 64;
+                value += (tied) ? "tied for" : "got";
+                int actualPlace = player.getPlace() % 64;
+                value += " " + actualPlace;
+                if (actualPlace == 1) {
+                    value += "st";
+                } else if (actualPlace == 2) {
+                    value += "nd";
+                } else if (actualPlace == 3) {
+                    value += "rd";
+                } else {
+                    value += "th";
+                }
+                return value + " place with a score of " + player.getScore() + ".";
+            }, player.placeProperty()));
+            rlabel.visibleProperty().bind(Bindings.and(
+                Bindings.not(player.startedProperty()),
+                Bindings.notEqual(player.scoreProperty(), -1)));
+            gameComponents.set(11, rlabel);
             for (Node node : gameComponents) {
                 if (node != null) {
                     node.visibleProperty().addListener((c, o, n) ->
