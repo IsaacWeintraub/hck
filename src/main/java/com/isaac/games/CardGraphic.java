@@ -1,3 +1,5 @@
+package com.isaac.games;
+
 import javafx.scene.image.ImageView;
 
 public class CardGraphic extends ImageView {

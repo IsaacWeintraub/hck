@@ -1,4 +1,16 @@
+# Build artifacts
+build/
 *.class
-Client\ action\ sequence
-Game\ flow
+
+# IDE/project files
+.classpath
+.gradle/
+.project
+.settings/
+.vscode/
+
+# macOS files
+.DS_Store
+
+# EMACS
 *~

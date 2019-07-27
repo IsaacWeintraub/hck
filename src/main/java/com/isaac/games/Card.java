@@ -1,3 +1,5 @@
+package com.isaac.games;
+
 public class Card {
 
     public enum Suit {

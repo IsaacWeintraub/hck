@@ -1,3 +1,5 @@
+package com.isaac.games;
+
 import javafx.collections.ObservableList;
 import javafx.collections.FXCollections;
 import java.io.BufferedReader;

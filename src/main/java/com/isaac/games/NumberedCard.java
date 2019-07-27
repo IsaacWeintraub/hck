@@ -1,3 +1,5 @@
+package com.isaac.games;
+
 public class NumberedCard extends Card {
 
     private long id;

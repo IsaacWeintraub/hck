@@ -1,3 +1,5 @@
+package com.isaac.games;
+
 import java.util.Scanner;
 
 public class ClientTester {
