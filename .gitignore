@@ -1,12 +1,14 @@
 # Build artifacts
 build/
 *.class
+out/
 
 # IDE/project files
 .classpath
 .gradle/
 .idea/
 *.iml
+lib/
 .project
 .settings/
 .vscode/
