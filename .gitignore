@@ -5,6 +5,8 @@ build/
 # IDE/project files
 .classpath
 .gradle/
+.idea/
+*.iml
 .project
 .settings/
 .vscode/
